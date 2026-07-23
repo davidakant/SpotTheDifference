@@ -280,18 +280,18 @@ html, body {
   gap: 0;
   width: 100%;
   min-height: 24px;
-  overflow: hidden;
-  /* 10 emoji span ~13.7x the font size; dividing card width by 15 keeps
-     the whole row on one line with margin to spare. */
-  font-size: clamp(10px, calc(var(--cw, 200px) / 15), 16px);
+  /* 10 emoji span ~13.7x the font size; dividing card width by 17 keeps the
+     whole row on one line with room for the larger "complete" size below. */
+  font-size: clamp(9px, calc(var(--cw, 200px) / 17), 15px);
   line-height: 1;
   padding: 2px;
 }
 
-/* Completed image: bigger stars (via transform so the card height is
-   unchanged) with a soft golden glow pulse. */
+/* Completed image: larger stars (bigger font, still within the card width so
+   they never overflow into neighbors) with a soft golden glow pulse. The
+   font stays <=20px so the row height — and thus the card — is unchanged. */
 .card-stars.complete {
-  transform: scale(1.2);
+  font-size: clamp(11px, calc(var(--cw, 200px) / 15), 19px);
   animation: starGlow 2.2s ease-in-out infinite;
 }
 @keyframes starGlow {
