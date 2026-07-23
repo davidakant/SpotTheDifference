@@ -248,6 +248,11 @@ const els = {
   confirmMsg: document.getElementById('confirmMsg'),
   confirmOk: document.getElementById('confirmOk'),
   confirmCancel: document.getElementById('confirmCancel'),
+  // tutorial
+  tutorial: document.getElementById('tutorial'),
+  tutCursor: document.getElementById('tutCursor'),
+  tutMarkersA: document.getElementById('tutMarkersA'),
+  tutMarkersB: document.getElementById('tutMarkersB'),
 };
 
 /* ---- Confirm dialog ---- */
@@ -642,6 +647,77 @@ const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 const mid = (a, b) => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
 
 /* ========================================================================= */
+/* Looping tutorial on the Collections page                                  */
+/* Non-interactive: an enlarged cursor glides to the first 5 differences of  */
+/* set 01 and "clicks" each, then resets and loops forever.                  */
+
+function startTutorial() {
+  const tut = els.tutorial;
+  if (!tut) return;
+  const cursor = els.tutCursor;
+  const panelA = tut.querySelector('.tut-panel');   // left image
+  const zones = SETS['01'].zones.slice(5, 10);   // the easier (larger) half
+  let step = 0;
+
+  function moveCursor(cx, cy, animate) {
+    const tr = tut.getBoundingClientRect();
+    const pr = panelA.getBoundingClientRect();
+    if (pr.width === 0) return false;                // hidden view
+    const x = (pr.left - tr.left) + cx * pr.width;
+    const y = (pr.top - tr.top) + cy * pr.height;
+    if (animate) {
+      cursor.style.transform = `translate(${x}px, ${y}px)`;
+    } else {
+      cursor.style.transition = 'none';
+      cursor.style.transform = `translate(${x}px, ${y}px)`;
+      void cursor.offsetWidth;                       // flush, then restore
+      cursor.style.transition = '';
+    }
+    return true;
+  }
+
+  function addTutMarker(container, z) {
+    const m = document.createElement('div');
+    m.className = 'tut-marker';
+    m.style.left = (z.cx * 100) + '%';
+    m.style.top = (z.cy * 100) + '%';
+    container.appendChild(m);
+  }
+
+  function resetLoop() {
+    els.tutMarkersA.innerHTML = '';
+    els.tutMarkersB.innerHTML = '';
+    moveCursor(0.5, 0.5, false);
+    step = 0;
+  }
+
+  function tick() {
+    // Pause while the Collections view isn't visible.
+    if (panelA.getBoundingClientRect().width === 0) {
+      setTimeout(tick, 500);
+      return;
+    }
+    if (step >= zones.length) {
+      setTimeout(() => { resetLoop(); setTimeout(tick, 700); }, 1400);
+      return;
+    }
+    const z = zones[step];
+    moveCursor(z.cx, z.cy, true);                    // glide to difference
+    setTimeout(() => {
+      cursor.classList.add('clicking');              // press + ripple
+      addTutMarker(els.tutMarkersA, z);
+      addTutMarker(els.tutMarkersB, z);
+      setTimeout(() => cursor.classList.remove('clicking'), 300);
+      step++;
+      setTimeout(tick, 850);
+    }, 950);
+  }
+
+  resetLoop();
+  setTimeout(tick, 900);
+}
+
+/* ========================================================================= */
 /* Boot                                                                      */
 
 setupPanel(els.panelA, els.markersA);
@@ -676,3 +752,4 @@ window.addEventListener('resize', () => {
 });
 
 goCollections();
+startTutorial();

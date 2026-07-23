@@ -198,6 +198,85 @@ html, body {
 }
 .progress-bar > span { display: block; height: 100%; background: var(--accent); border-radius: 999px; transition: width 0.3s ease; }
 
+/* ---------- Instructions + looping tutorial (Collections page) ---------- */
+.intro {
+  max-width: 1120px;
+  margin: 30px auto 8px;
+  padding-top: 26px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  gap: 32px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.intro-text { flex: 1 1 300px; }
+.intro-text h3 { font-size: 18px; font-weight: 700; margin-bottom: 12px; }
+.intro-text ol { padding-left: 20px; }
+.intro-text li { color: var(--muted); font-size: 14px; line-height: 1.5; margin-bottom: 8px; }
+
+.tutorial {
+  position: relative;
+  flex: 0 0 auto;
+  margin: 0 auto;
+  pointer-events: none;   /* non-interactive */
+}
+.tut-board { display: flex; gap: 6px; }
+.tut-panel {
+  position: relative;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: #000;
+}
+.tut-img {
+  display: block;
+  /* As large as possible: the smaller of a viewport-height cap and a
+     width-fit that reserves ~340px for the instructions column + gaps, so
+     the two side-by-side images never overflow the iPad screen width.
+     1.4906 = 1264/848 (image height per unit width). */
+  height: clamp(170px, min(46dvh, calc((min(100dvw - 48px, 1120px) - 340px) / 2 * 1.4906)), 440px);
+  width: auto;
+}
+.tut-markers { position: absolute; inset: 0; }
+.tut-marker {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  width: 20px;
+  height: 20px;
+  border: 2.5px solid var(--accent);
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px rgba(0,0,0,0.35), 0 0 8px rgba(74,222,128,0.6);
+  background: rgba(74, 222, 128, 0.14);
+  animation: pop 0.3s cubic-bezier(0.2, 1.4, 0.5, 1);
+}
+.tut-cursor {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transition: transform 0.85s cubic-bezier(0.45, 0.05, 0.2, 1);
+  filter: drop-shadow(0 2px 3px rgba(0,0,0,0.5));
+  z-index: 5;
+}
+.tut-cursor svg { display: block; transform-origin: 0 0; transition: transform 0.15s ease; }
+.tut-cursor.clicking svg { transform: scale(0.78); }
+.tut-cursor::after {
+  content: '';
+  position: absolute;
+  left: 1px;
+  top: 1px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 2px solid rgba(74, 222, 128, 0.9);
+  transform: translate(-50%, -50%) scale(0);
+  opacity: 0;
+}
+.tut-cursor.clicking::after { animation: tutClick 0.4s ease-out; }
+@keyframes tutClick {
+  0%   { transform: translate(-50%, -50%) scale(0.3); opacity: 0.9; }
+  100% { transform: translate(-50%, -50%) scale(3.2); opacity: 0; }
+}
+
 /* ---------- Image cards grid (5 columns x 2 rows, fit to screen) ----------
    Card width = the smaller of what fits horizontally (5 across) and what
    fits vertically (2 rows tall), so all 10 cards are visible without

@@ -15,6 +15,37 @@
     </header>
     <div class="scroll-area">
       <div class="collections-grid" id="collectionsGrid"></div>
+
+      <!-- Instructions (left) + looping tutorial (right) -->
+      <div class="intro">
+        <div class="intro-text">
+          <h3>How to play</h3>
+          <ol>
+            <li>Compare the two pictures — there are 10 differences.</li>
+            <li>Spot one and tap it on either picture.</li>
+            <li>Each find lights up a star; find all 10 to finish the image.</li>
+            <li>Pinch or scroll to zoom, drag to pan, double-tap to reset.</li>
+          </ol>
+        </div>
+        <div class="tutorial" id="tutorial" aria-hidden="true">
+          <div class="tut-board">
+            <div class="tut-panel">
+              <img class="tut-img" src="01_A.png" alt="" draggable="false" />
+              <div class="tut-markers" id="tutMarkersA"></div>
+            </div>
+            <div class="tut-panel">
+              <img class="tut-img" src="01_B.png" alt="" draggable="false" />
+              <div class="tut-markers" id="tutMarkersB"></div>
+            </div>
+          </div>
+          <div class="tut-cursor" id="tutCursor">
+            <svg viewBox="0 0 18 18" width="38" height="38" aria-hidden="true">
+              <path d="M0 0 L0 15 L4 11.4 L6.3 16.6 L8.1 15.8 L5.8 10.8 L10.6 10.8 Z"
+                    fill="#fff" stroke="#0b0c11" stroke-width="1" stroke-linejoin="round" />
+            </svg>
+          </div>
+        </div>
+      </div>
     </div>
   </section>
 
