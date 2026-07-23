@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>Spot the Difference</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <!-- ============ VIEW: Collections ============ -->
+  <section class="view active" id="viewCollections">
+    <header class="menu-header">
+      <h1 class="menu-title">Spot the Difference</h1>
+    </header>
+    <div class="scroll-area">
+      <div class="collections-grid" id="collectionsGrid"></div>
+    </div>
+  </section>
+
+  <!-- ============ VIEW: Collection (image grid) ============ -->
+  <section class="view" id="viewCollection">
+    <header class="menu-header">
+      <button class="back-btn" id="backToCollections" type="button">‹ Collections</button>
+      <h1 class="menu-title" id="collectionTitle">Collection</h1>
+      <div class="header-score"><span id="collectionScore">0</span><span class="hs-sep">/</span><span id="collectionScoreTotal">0</span></div>
+    </header>
+    <div class="scroll-area">
+      <div class="cards-grid" id="cardsGrid"></div>
+    </div>
+  </section>
+
+  <!-- ============ VIEW: Game (2-up) ============ -->
+  <section class="view" id="viewGame">
+    <header id="ribbon">
+      <div class="ribbon-left">
+        <button class="back-btn" id="backToCollection" type="button">‹ Back</button>
+        <span class="game-title" id="gameTitle">Set</span>
+      </div>
+      <div class="ribbon-right">
+        <div class="score" id="score" aria-live="polite">
+          <span class="score-found" id="scoreFound">0</span><span class="score-sep">/</span><span class="score-total" id="scoreTotal">10</span>
+          <span class="score-label">found</span>
+        </div>
+      </div>
+    </header>
+
+    <main id="board">
+      <section class="panel" id="panelA" data-side="A">
+        <div class="content" id="contentA">
+          <img class="scene" id="imgA" alt="Scene A" draggable="false" />
+          <div class="markers" id="markersA"></div>
+        </div>
+      </section>
+      <div class="divider" aria-hidden="true"></div>
+      <section class="panel" id="panelB" data-side="B">
+        <div class="content" id="contentB">
+          <img class="scene" id="imgB" alt="Scene B" draggable="false" />
+          <div class="markers" id="markersB"></div>
+        </div>
+      </section>
+    </main>
+  </section>
+
+  <!-- ============ Win overlay ============ -->
+  <div id="winOverlay" class="overlay hidden">
+    <div class="overlay-card">
+      <div class="overlay-emoji">🎉</div>
+      <h2>You found all 10!</h2>
+      <p>Great eyes.</p>
+      <div class="overlay-actions">
+        <button id="playAgain" class="btn btn-ghost" type="button">Play again</button>
+        <button id="winBack" class="btn" type="button">Back to collection</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ Confirm dialog ============ -->
+  <div id="confirmOverlay" class="overlay hidden">
+    <div class="overlay-card">
+      <div class="overlay-emoji">⚠️</div>
+      <h2 id="confirmTitle">Reset progress?</h2>
+      <p id="confirmMsg"></p>
+      <div class="overlay-actions">
+        <button id="confirmCancel" class="btn btn-ghost" type="button">Cancel</button>
+        <button id="confirmOk" class="btn btn-danger" type="button">Reset</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="game.js"></script>
+</body>
+</html>
