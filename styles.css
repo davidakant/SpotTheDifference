@@ -198,21 +198,45 @@ html, body {
 }
 .progress-bar > span { display: block; height: 100%; background: var(--accent); border-radius: 999px; transition: width 0.3s ease; }
 
-/* ---------- Image cards grid (5 columns) ---------- */
+/* ---------- Image cards grid (5 columns x 2 rows, fit to screen) ----------
+   Card width = the smaller of what fits horizontally (5 across) and what
+   fits vertically (2 rows tall), so all 10 cards are visible without
+   clipping or scrolling in either orientation. */
+#viewCollection .scroll-area {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: auto;
+  padding: 12px 16px;
+}
 .cards-grid {
+  --gap-x: 14px;
+  --gap-y: 12px;
+  --pad-x: 16px;
+  --header-h: 64px;
+  --star-h: 34px;
+  --ratio: 0.6709;                 /* 848 / 1264 (portrait) */
+  --by-w: calc((100dvw - 2 * var(--pad-x) - 4 * var(--gap-x)) / 5);
+  --by-h: calc(((100dvh - var(--header-h) - 24px - var(--star-h) - var(--gap-y)) / 2) * var(--ratio));
+  --cw: min(var(--by-w), var(--by-h));
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 18px;
-  max-width: 1400px;
-  margin: 0 auto;
+  grid-template-columns: repeat(5, var(--cw));
+  justify-content: center;
+  align-content: center;
+  gap: var(--gap-y) var(--gap-x);
+  width: 100%;
 }
 .image-card {
+  width: var(--cw);
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  align-items: center;
+  gap: 6px;
 }
 .card-thumb {
   position: relative;
+  width: 100%;
   aspect-ratio: 848 / 1264;
   border-radius: 14px;
   overflow: hidden;
@@ -250,14 +274,18 @@ html, body {
 }
 .card-stars {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   justify-content: center;
   align-items: center;
-  gap: 2px;
+  gap: 0;
+  width: 100%;
   min-height: 24px;
-  font-size: 16px;
+  overflow: hidden;
+  /* 10 emoji span ~13.7x the font size; dividing card width by 15 keeps
+     the whole row on one line with margin to spare. */
+  font-size: clamp(10px, calc(var(--cw, 200px) / 15), 16px);
   line-height: 1;
-  padding: 2px 4px;
+  padding: 2px;
 }
 
 /* Completed image: bigger stars (via transform so the card height is
