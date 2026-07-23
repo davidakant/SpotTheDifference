@@ -1,0 +1,6 @@
+# Netlify configuration for Spot the Difference (static site, no framework).
+# The build step copies only the game assets into `dist/`, deliberately
+# leaving the *_HIT.png answer-key images out of the published site.
+[build]
+  publish = "dist"
+  command = "mkdir -p dist && cp index.html styles.css game.js *_A.png *_B.png dist/"
