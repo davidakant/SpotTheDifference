@@ -137,7 +137,11 @@ const HIT_TOLERANCE = 1.4;
 /* ========================================================================= */
 /* Progress persistence                                                      */
 
-function progressKey(setId) { return 'std_found_' + setId; }
+const PROGRESS_PREFIX = 'std_found_';
+const SCHEMA_KEY = 'std_schema_version';
+const SCHEMA_VERSION = 1;
+
+function progressKey(setId) { return PROGRESS_PREFIX + setId; }
 function loadProgress(setId) {
   try { return new Set(JSON.parse(localStorage.getItem(progressKey(setId)) || '[]')); }
   catch (e) { return new Set(); }
@@ -146,6 +150,67 @@ function saveProgress(setId, set) {
   try { localStorage.setItem(progressKey(setId), JSON.stringify([...set])); } catch (e) {}
 }
 function setScore(setId) { return loadProgress(setId).size; }
+
+/* One-time schema migrations so renaming set/collection ids never silently
+   orphans a player's saved stars. Bump SCHEMA_VERSION and add a step here
+   whenever ids change. */
+function migrateProgress() {
+  let v = 0;
+  try { v = parseInt(localStorage.getItem(SCHEMA_KEY) || '0', 10) || 0; } catch (e) {}
+
+  // v0 -> v1: set ids went from global 'NN' to per-collection '01_NN'
+  // (Collection 01). Move any legacy keys onto the new ids (union merge).
+  if (v < 1) {
+    for (let i = 1; i <= 10; i++) {
+      const nn = String(i).padStart(2, '0');
+      const oldKey = PROGRESS_PREFIX + nn;
+      const newKey = PROGRESS_PREFIX + '01_' + nn;
+      try {
+        const oldVal = localStorage.getItem(oldKey);
+        if (oldVal != null) {
+          mergeIntoKey(newKey, oldVal);
+          localStorage.removeItem(oldKey);
+        }
+      } catch (e) {}
+    }
+  }
+
+  try { localStorage.setItem(SCHEMA_KEY, String(SCHEMA_VERSION)); } catch (e) {}
+}
+
+// Merge an array-of-indices JSON string into an existing key (union, so no
+// progress is ever lost).
+function mergeIntoKey(key, incomingJson) {
+  let incoming = [], existing = [];
+  try { incoming = JSON.parse(incomingJson) || []; } catch (e) { return; }
+  try { existing = JSON.parse(localStorage.getItem(key) || '[]') || []; } catch (e) {}
+  const merged = [...new Set([...existing, ...incoming])];
+  localStorage.setItem(key, JSON.stringify(merged));
+}
+
+/* ---- Export / import backup ---- */
+function exportProgress() {
+  const data = {};
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (k && k.startsWith(PROGRESS_PREFIX)) data[k] = localStorage.getItem(k);
+  }
+  const payload = { app: 'std', v: SCHEMA_VERSION, data };
+  return btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
+}
+
+// Returns the number of sets restored; throws on an invalid code.
+function importProgress(code) {
+  const payload = JSON.parse(decodeURIComponent(escape(atob((code || '').trim()))));
+  if (!payload || payload.app !== 'std' || typeof payload.data !== 'object') {
+    throw new Error('Not a valid backup code.');
+  }
+  let n = 0;
+  for (const [k, val] of Object.entries(payload.data)) {
+    if (k.startsWith(PROGRESS_PREFIX)) { mergeIntoKey(k, val); n++; }
+  }
+  return n;
+}
 
 function collectionPlayableSets(col) {
   if (!col.slots) return [];
@@ -200,7 +265,62 @@ const els = {
   tutCursor: document.getElementById('tutCursor'),
   tutMarkersA: document.getElementById('tutMarkersA'),
   tutMarkersB: document.getElementById('tutMarkersB'),
+  // backup
+  btnExport: document.getElementById('btnExport'),
+  btnImport: document.getElementById('btnImport'),
+  backupOverlay: document.getElementById('backupOverlay'),
+  backupTitle: document.getElementById('backupTitle'),
+  backupMsg: document.getElementById('backupMsg'),
+  backupText: document.getElementById('backupText'),
+  backupClose: document.getElementById('backupClose'),
+  backupAction: document.getElementById('backupAction'),
 };
+
+/* ---- Backup dialog ---- */
+let backupMode = 'export';
+function openBackup(mode) {
+  backupMode = mode;
+  els.backupMsg.className = 'backup-msg';
+  if (mode === 'export') {
+    els.backupTitle.textContent = 'Export backup';
+    els.backupMsg.textContent = 'Copy this code and keep it somewhere safe. Paste it into "Import backup" on another device — or here after clearing data — to restore your stars.';
+    els.backupText.value = exportProgress();
+    els.backupText.readOnly = true;
+    els.backupAction.textContent = 'Copy';
+  } else {
+    els.backupTitle.textContent = 'Import backup';
+    els.backupMsg.textContent = 'Paste a backup code below and tap Restore. Your current stars are kept — restoring only adds to them.';
+    els.backupText.value = '';
+    els.backupText.readOnly = false;
+    els.backupAction.textContent = 'Restore';
+  }
+  els.backupOverlay.classList.remove('hidden');
+  if (mode === 'export') { els.backupText.focus(); els.backupText.select(); }
+}
+function closeBackup() { els.backupOverlay.classList.add('hidden'); }
+
+async function backupAction() {
+  if (backupMode === 'export') {
+    const text = els.backupText.value;
+    let copied = false;
+    try { await navigator.clipboard.writeText(text); copied = true; } catch (e) {
+      els.backupText.focus(); els.backupText.select();
+      try { copied = document.execCommand('copy'); } catch (e2) {}
+    }
+    els.backupMsg.className = 'backup-msg ok';
+    els.backupMsg.textContent = copied ? 'Copied to clipboard!' : 'Select the code above and copy it manually.';
+  } else {
+    try {
+      const n = importProgress(els.backupText.value);
+      els.backupMsg.className = 'backup-msg ok';
+      els.backupMsg.textContent = `Restored progress for ${n} image${n === 1 ? '' : 's'}.`;
+      renderCollections();
+    } catch (e) {
+      els.backupMsg.className = 'backup-msg error';
+      els.backupMsg.textContent = 'That code didn’t work — check you pasted the whole thing.';
+    }
+  }
+}
 
 /* ---- Confirm dialog ---- */
 let pendingConfirm = null;
@@ -696,6 +816,14 @@ els.confirmOverlay.addEventListener('click', (e) => {
   if (e.target === els.confirmOverlay) closeConfirm();
 });
 
+els.btnExport.addEventListener('click', () => openBackup('export'));
+els.btnImport.addEventListener('click', () => openBackup('import'));
+els.backupClose.addEventListener('click', closeBackup);
+els.backupAction.addEventListener('click', backupAction);
+els.backupOverlay.addEventListener('click', (e) => {
+  if (e.target === els.backupOverlay) closeBackup();
+});
+
 document.addEventListener('gesturestart', (e) => e.preventDefault());
 els.viewGame.addEventListener('dblclick', (e) => e.preventDefault());
 
@@ -709,5 +837,6 @@ window.addEventListener('resize', () => {
   });
 });
 
+migrateProgress();
 goCollections();
 startTutorial();
