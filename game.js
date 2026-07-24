@@ -230,6 +230,8 @@ const els = {
   collectionScore: document.getElementById('collectionScore'),
   collectionScoreTotal: document.getElementById('collectionScoreTotal'),
   cardsGrid: document.getElementById('cardsGrid'),
+  collScroll: document.querySelector('#viewCollection .scroll-area'),
+  scrollHint: document.getElementById('scrollHint'),
   backToCollections: document.getElementById('backToCollections'),
   // game
   imgA: document.getElementById('imgA'),
@@ -371,6 +373,15 @@ function renderCollections() {
 /* ========================================================================= */
 /* Rendering — Collection (image grid)                                       */
 
+// Show the "More ↓" hint + bottom fade only when the grid scrolls past the
+// bottom of the screen.
+function updateScrollHint() {
+  const sa = els.collScroll;
+  if (!sa) return;
+  const moreBelow = (sa.scrollHeight - sa.clientHeight - sa.scrollTop) > 8;
+  els.viewCollection.classList.toggle('has-more', moreBelow);
+}
+
 function renderCollection(collectionId) {
   const col = COLLECTIONS.find(c => c.id === collectionId);
   els.collectionTitle.innerHTML = col.title
@@ -380,8 +391,8 @@ function renderCollection(collectionId) {
   els.collectionScore.textContent = done;
   els.collectionScoreTotal.textContent = total;
 
-  // Size the grid to fit however many rows this collection needs.
-  els.cardsGrid.style.setProperty('--rows', Math.ceil(col.slots.length / 5));
+  els.collScroll.scrollTop = 0;   // start at the top; recompute the scroll hint
+  requestAnimationFrame(updateScrollHint);
 
   els.cardsGrid.innerHTML = '';
   col.slots.forEach((setId) => {
@@ -754,6 +765,8 @@ els.confirmOverlay.addEventListener('click', (e) => {
   if (e.target === els.confirmOverlay) closeConfirm();
 });
 
+els.collScroll.addEventListener('scroll', updateScrollHint, { passive: true });
+
 document.addEventListener('gesturestart', (e) => e.preventDefault());
 els.viewGame.addEventListener('dblclick', (e) => e.preventDefault());
 
@@ -761,6 +774,7 @@ let resizeRAF = 0;
 window.addEventListener('resize', () => {
   cancelAnimationFrame(resizeRAF);
   resizeRAF = requestAnimationFrame(() => {
+    if (els.viewCollection.classList.contains('active')) updateScrollHint();
     if (!els.viewGame.classList.contains('active') || !imgNatW) return;
     computeLayout();
     resetView();
