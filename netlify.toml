@@ -3,4 +3,4 @@
 # leaving the *_HIT.png answer-key images out of the published site.
 [build]
   publish = "dist"
-  command = "mkdir -p dist && cp index.html styles.css game.js *_A.png *_B.png dist/"
+  command = "mkdir -p dist/C01 dist/C02 && cp index.html styles.css game.js dist/ && cp C01/*_A.png C01/*_B.png dist/C01/ && cp C02/*_A.png C02/*_B.png dist/C02/"
