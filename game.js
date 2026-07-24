@@ -137,11 +137,33 @@ const HIT_TOLERANCE = 1.4;
 /* ========================================================================= */
 /* Progress persistence                                                      */
 
-const PROGRESS_PREFIX = 'std_found_';
-const SCHEMA_KEY = 'std_schema_version';
-const SCHEMA_VERSION = 1;
+/* ---- Stable identity: cross-reference table ------------------------------
+   Progress is saved per image under a PERMANENT uid — NOT the set id or its
+   position. So collections and images can be renamed, renumbered, or moved
+   between collections and nobody loses their stars: only this table changes,
+   and the localStorage keys (std_found_u<uid>) stay put.
 
-function progressKey(setId) { return PROGRESS_PREFIX + setId; }
+   RULES when editing:
+     - Every playable set in COLLECTIONS must have an entry here.
+     - A uid, once assigned, is NEVER reused or renumbered.
+     - New images get the next unused number (…, 23, 24, …).                */
+const SET_UID = {
+  '01_01': 1,  '01_02': 2,  '01_03': 3,  '01_04': 4,  '01_05': 5,
+  '01_06': 6,  '01_07': 7,  '01_08': 8,  '01_09': 9,  '01_10': 10,
+  '02_01': 11, '02_02': 12, '02_03': 13, '02_04': 14, '02_05': 15, '02_06': 16,
+  '02_07': 17, '02_08': 18, '02_09': 19, '02_10': 20, '02_11': 21, '02_12': 22,
+};
+
+const UID_PREFIX = 'std_found_u';        // localStorage key: std_found_u<uid>
+const SCHEMA_KEY = 'std_schema_version';
+const SCHEMA_VERSION = 2;
+
+function progressKey(setId) {
+  const uid = SET_UID[setId];
+  // Fall back to the raw id if a set was added without a uid, so unregistered
+  // sets don't all collide on one key. (Add it to SET_UID to make it stable.)
+  return uid != null ? UID_PREFIX + uid : 'std_found_' + setId;
+}
 function loadProgress(setId) {
   try { return new Set(JSON.parse(localStorage.getItem(progressKey(setId)) || '[]')); }
   catch (e) { return new Set(); }
@@ -151,65 +173,36 @@ function saveProgress(setId, set) {
 }
 function setScore(setId) { return loadProgress(setId).size; }
 
-/* One-time schema migrations so renaming set/collection ids never silently
-   orphans a player's saved stars. Bump SCHEMA_VERSION and add a step here
-   whenever ids change. */
+/* One-time bridge from the OLD id-based storage keys onto the permanent uid
+   keys. After this runs, future reorganizations need no migration at all —
+   progress already lives under stable uids. Idempotent + version-gated. */
+const LEGACY_GLOBAL_TO_UID = {   // original single-collection build: 'NN' = Collection 01
+  '01': 1, '02': 2, '03': 3, '04': 4, '05': 5,
+  '06': 6, '07': 7, '08': 8, '09': 9, '10': 10,
+};
 function migrateProgress() {
   let v = 0;
   try { v = parseInt(localStorage.getItem(SCHEMA_KEY) || '0', 10) || 0; } catch (e) {}
-
-  // v0 -> v1: set ids went from global 'NN' to per-collection '01_NN'
-  // (Collection 01). Move any legacy keys onto the new ids (union merge).
-  if (v < 1) {
-    for (let i = 1; i <= 10; i++) {
-      const nn = String(i).padStart(2, '0');
-      const oldKey = PROGRESS_PREFIX + nn;
-      const newKey = PROGRESS_PREFIX + '01_' + nn;
+  if (v < 2) {
+    const bridge = (oldId, uid) => {
+      const oldKey = 'std_found_' + oldId;
       try {
-        const oldVal = localStorage.getItem(oldKey);
-        if (oldVal != null) {
-          mergeIntoKey(newKey, oldVal);
-          localStorage.removeItem(oldKey);
-        }
+        const val = localStorage.getItem(oldKey);
+        if (val != null) { mergeIntoKey(UID_PREFIX + uid, val); localStorage.removeItem(oldKey); }
       } catch (e) {}
-    }
+    };
+    for (const [id, uid] of Object.entries(LEGACY_GLOBAL_TO_UID)) bridge(id, uid); // original build
+    for (const [id, uid] of Object.entries(SET_UID)) bridge(id, uid);              // 'CC_II' build
   }
-
   try { localStorage.setItem(SCHEMA_KEY, String(SCHEMA_VERSION)); } catch (e) {}
 }
 
-// Merge an array-of-indices JSON string into an existing key (union, so no
-// progress is ever lost).
+// Union-merge an array-of-indices JSON string into a key (never loses progress).
 function mergeIntoKey(key, incomingJson) {
   let incoming = [], existing = [];
   try { incoming = JSON.parse(incomingJson) || []; } catch (e) { return; }
   try { existing = JSON.parse(localStorage.getItem(key) || '[]') || []; } catch (e) {}
-  const merged = [...new Set([...existing, ...incoming])];
-  localStorage.setItem(key, JSON.stringify(merged));
-}
-
-/* ---- Export / import backup ---- */
-function exportProgress() {
-  const data = {};
-  for (let i = 0; i < localStorage.length; i++) {
-    const k = localStorage.key(i);
-    if (k && k.startsWith(PROGRESS_PREFIX)) data[k] = localStorage.getItem(k);
-  }
-  const payload = { app: 'std', v: SCHEMA_VERSION, data };
-  return btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
-}
-
-// Returns the number of sets restored; throws on an invalid code.
-function importProgress(code) {
-  const payload = JSON.parse(decodeURIComponent(escape(atob((code || '').trim()))));
-  if (!payload || payload.app !== 'std' || typeof payload.data !== 'object') {
-    throw new Error('Not a valid backup code.');
-  }
-  let n = 0;
-  for (const [k, val] of Object.entries(payload.data)) {
-    if (k.startsWith(PROGRESS_PREFIX)) { mergeIntoKey(k, val); n++; }
-  }
-  return n;
+  localStorage.setItem(key, JSON.stringify([...new Set([...existing, ...incoming])]));
 }
 
 function collectionPlayableSets(col) {
@@ -265,62 +258,7 @@ const els = {
   tutCursor: document.getElementById('tutCursor'),
   tutMarkersA: document.getElementById('tutMarkersA'),
   tutMarkersB: document.getElementById('tutMarkersB'),
-  // backup
-  btnExport: document.getElementById('btnExport'),
-  btnImport: document.getElementById('btnImport'),
-  backupOverlay: document.getElementById('backupOverlay'),
-  backupTitle: document.getElementById('backupTitle'),
-  backupMsg: document.getElementById('backupMsg'),
-  backupText: document.getElementById('backupText'),
-  backupClose: document.getElementById('backupClose'),
-  backupAction: document.getElementById('backupAction'),
 };
-
-/* ---- Backup dialog ---- */
-let backupMode = 'export';
-function openBackup(mode) {
-  backupMode = mode;
-  els.backupMsg.className = 'backup-msg';
-  if (mode === 'export') {
-    els.backupTitle.textContent = 'Export backup';
-    els.backupMsg.textContent = 'Copy this code and keep it somewhere safe. Paste it into "Import backup" on another device — or here after clearing data — to restore your stars.';
-    els.backupText.value = exportProgress();
-    els.backupText.readOnly = true;
-    els.backupAction.textContent = 'Copy';
-  } else {
-    els.backupTitle.textContent = 'Import backup';
-    els.backupMsg.textContent = 'Paste a backup code below and tap Restore. Your current stars are kept — restoring only adds to them.';
-    els.backupText.value = '';
-    els.backupText.readOnly = false;
-    els.backupAction.textContent = 'Restore';
-  }
-  els.backupOverlay.classList.remove('hidden');
-  if (mode === 'export') { els.backupText.focus(); els.backupText.select(); }
-}
-function closeBackup() { els.backupOverlay.classList.add('hidden'); }
-
-async function backupAction() {
-  if (backupMode === 'export') {
-    const text = els.backupText.value;
-    let copied = false;
-    try { await navigator.clipboard.writeText(text); copied = true; } catch (e) {
-      els.backupText.focus(); els.backupText.select();
-      try { copied = document.execCommand('copy'); } catch (e2) {}
-    }
-    els.backupMsg.className = 'backup-msg ok';
-    els.backupMsg.textContent = copied ? 'Copied to clipboard!' : 'Select the code above and copy it manually.';
-  } else {
-    try {
-      const n = importProgress(els.backupText.value);
-      els.backupMsg.className = 'backup-msg ok';
-      els.backupMsg.textContent = `Restored progress for ${n} image${n === 1 ? '' : 's'}.`;
-      renderCollections();
-    } catch (e) {
-      els.backupMsg.className = 'backup-msg error';
-      els.backupMsg.textContent = 'That code didn’t work — check you pasted the whole thing.';
-    }
-  }
-}
 
 /* ---- Confirm dialog ---- */
 let pendingConfirm = null;
@@ -816,14 +754,6 @@ els.confirmOverlay.addEventListener('click', (e) => {
   if (e.target === els.confirmOverlay) closeConfirm();
 });
 
-els.btnExport.addEventListener('click', () => openBackup('export'));
-els.btnImport.addEventListener('click', () => openBackup('import'));
-els.backupClose.addEventListener('click', closeBackup);
-els.backupAction.addEventListener('click', backupAction);
-els.backupOverlay.addEventListener('click', (e) => {
-  if (e.target === els.backupOverlay) closeBackup();
-});
-
 document.addEventListener('gesturestart', (e) => e.preventDefault());
 els.viewGame.addEventListener('dblclick', (e) => e.preventDefault());
 
@@ -836,6 +766,13 @@ window.addEventListener('resize', () => {
     resetView();
   });
 });
+
+// Dev safety net: warn if any playable set is missing a permanent uid.
+COLLECTIONS.forEach(c => (c.slots || []).forEach(s => {
+  if (s && SETS[s] && SET_UID[s] == null) {
+    console.warn('SpotTheDifference: set "' + s + '" has no SET_UID — add one so its progress stays stable.');
+  }
+}));
 
 migrateProgress();
 goCollections();

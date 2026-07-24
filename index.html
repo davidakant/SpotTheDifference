@@ -46,15 +46,6 @@
           </div>
         </div>
       </div>
-
-      <!-- Progress backup -->
-      <div class="backup-bar">
-        <span class="backup-label">Progress is saved on this device. Back it up to keep it safe or move it to another device.</span>
-        <div class="backup-btns">
-          <button id="btnExport" class="mini-btn" type="button">Export backup</button>
-          <button id="btnImport" class="mini-btn" type="button">Import backup</button>
-        </div>
-      </div>
     </div>
   </section>
 
@@ -124,19 +115,6 @@
       <div class="overlay-actions">
         <button id="confirmCancel" class="btn btn-ghost" type="button">Cancel</button>
         <button id="confirmOk" class="btn btn-danger" type="button">Reset</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ============ Backup dialog ============ -->
-  <div id="backupOverlay" class="overlay hidden">
-    <div class="overlay-card backup-card">
-      <h2 id="backupTitle">Backup progress</h2>
-      <p id="backupMsg" class="backup-msg"></p>
-      <textarea id="backupText" class="backup-text" spellcheck="false" autocomplete="off"></textarea>
-      <div class="overlay-actions">
-        <button id="backupClose" class="btn btn-ghost" type="button">Close</button>
-        <button id="backupAction" class="btn" type="button">Copy</button>
       </div>
     </div>
   </div>
