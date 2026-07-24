@@ -42,6 +42,7 @@ html, body {
   flex: 0 0 auto;
 }
 .menu-title { font-size: 20px; font-weight: 700; letter-spacing: 0.3px; }
+.rib-name { color: #f5c518; font-weight: 800; margin-left: 12px; }
 .header-score {
   margin-left: auto;
   font-variant-numeric: tabular-nums;

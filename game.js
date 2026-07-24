@@ -315,7 +315,9 @@ function renderCollections() {
 
 function renderCollection(collectionId) {
   const col = COLLECTIONS.find(c => c.id === collectionId);
-  els.collectionTitle.textContent = col.name;
+  els.collectionTitle.innerHTML = col.title
+    ? `${col.name}<span class="rib-name">${col.title}</span>`
+    : col.name;
   const { done, total } = collectionScore(col);
   els.collectionScore.textContent = done;
   els.collectionScoreTotal.textContent = total;
