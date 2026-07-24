@@ -110,12 +110,14 @@ const COLLECTIONS = [
   {
     id: '01',
     name: 'Collection 01',
+    title: 'Starter Pack',
     slots: ['01_01', '01_02', '01_03', '01_04', '01_05',
             '01_06', '01_07', '01_08', '01_09', '01_10'],
   },
   {
     id: '02',
     name: 'Collection 02',
+    title: 'Dogs',
     slots: ['02_01', '02_02', '02_03', '02_04', '02_05', '02_06',
             '02_07', '02_08', '02_09', '02_10', '02_11', '02_12'],
   },
@@ -268,7 +270,10 @@ function renderCollections() {
         <div class="cc-collage cc-empty"><span>🔒</span></div>
         <div class="cc-body">
           <span class="badge-soon">Coming soon</span>
-          <h2>${col.name}</h2>
+          <div class="cc-head">
+            <div class="cc-label">${col.name}</div>
+            <h2 class="cc-title cc-title-muted">???</h2>
+          </div>
           <div class="cc-meta">New puzzles on the way</div>
         </div>`;
     } else {
@@ -280,7 +285,10 @@ function renderCollections() {
       card.innerHTML = `
         ${collageHTML(imgs)}
         <div class="cc-body">
-          <h2>${col.name}</h2>
+          <div class="cc-head">
+            <div class="cc-label">${col.name}</div>
+            <h2 class="cc-title">${col.title}</h2>
+          </div>
           <div class="cc-meta">${sets.length} image${sets.length === 1 ? '' : 's'} available</div>
           <div class="progress-bar"><span style="width:${pct}%"></span></div>
           <div class="cc-footer">

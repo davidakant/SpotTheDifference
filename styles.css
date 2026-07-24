@@ -104,7 +104,21 @@ html, body {
   gap: 12px;
   flex: 1 1 auto;
 }
-.collection-card h2 { font-size: 22px; font-weight: 700; }
+.cc-head { display: flex; flex-direction: column; gap: 2px; }
+.cc-label {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.collection-card .cc-title {
+  font-size: 30px;
+  font-weight: 800;
+  line-height: 1.1;
+  color: #f5c518;            /* collection name in yellow */
+}
+.collection-card .cc-title-muted { color: var(--muted); opacity: 0.8; }
 .collection-card .cc-meta { color: var(--muted); font-size: 14px; }
 .collection-card .cc-footer {
   margin-top: auto;
