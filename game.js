@@ -99,6 +99,10 @@ const SETS = {
     a: 'C02/02_12_A.png', b: 'C02/02_12_B.png',
     zones: [{"cx":0.8583,"cy":0.228,"rx":0.0292,"ry":0.0198},{"cx":0.4001,"cy":0.2665,"rx":0.0366,"ry":0.0245},{"cx":0.6782,"cy":0.2911,"rx":0.0265,"ry":0.0176},{"cx":0.1555,"cy":0.3734,"rx":0.0233,"ry":0.0156},{"cx":0.8017,"cy":0.4585,"rx":0.0366,"ry":0.0247},{"cx":0.4782,"cy":0.4922,"rx":0.0369,"ry":0.0245},{"cx":0.1929,"cy":0.5066,"rx":0.0513,"ry":0.0344},{"cx":0.3587,"cy":0.5392,"rx":0.0366,"ry":0.0245},{"cx":0.6917,"cy":0.5494,"rx":0.0513,"ry":0.0346},{"cx":0.2136,"cy":0.6606,"rx":0.0292,"ry":0.0196}],
   },
+  '02_13': {
+    a: 'C02/02_13_A.png', b: 'C02/02_13_B.png',
+    zones: [{"cx":0.6237,"cy":0.0358,"rx":0.0289,"ry":0.0198},{"cx":0.7473,"cy":0.0791,"rx":0.0265,"ry":0.0178},{"cx":0.8245,"cy":0.2824,"rx":0.023,"ry":0.0154},{"cx":0.6962,"cy":0.3273,"rx":0.0236,"ry":0.0158},{"cx":0.4851,"cy":0.3915,"rx":0.0236,"ry":0.0154},{"cx":0.9043,"cy":0.4219,"rx":0.0236,"ry":0.0158},{"cx":0.2875,"cy":0.539,"rx":0.0265,"ry":0.0178},{"cx":0.1918,"cy":0.5727,"rx":0.0295,"ry":0.0194},{"cx":0.8516,"cy":0.6561,"rx":0.0265,"ry":0.0178},{"cx":0.2372,"cy":0.762,"rx":0.0348,"ry":0.0233}],
+  },
 };
 
 const DIFFS_PER_SET = 10;
@@ -118,8 +122,8 @@ const COLLECTIONS = [
     id: '02',
     name: 'Collection 02',
     title: 'Dogs',
-    slots: ['02_01', '02_02', '02_03', '02_04', '02_05', '02_06',
-            '02_07', '02_08', '02_09', '02_10', '02_11', '02_12'],
+    slots: ['02_01', '02_02', '02_03', '02_04', '02_05', '02_06', '02_07',
+            '02_08', '02_09', '02_10', '02_11', '02_12', '02_13'],
   },
   {
     id: '03',
@@ -133,6 +137,10 @@ const MIN_SCALE = 1, MAX_SCALE = 6;
 const TAP_MOVE_TOL = 8, TAP_TIME_TOL = 350;
 const DOUBLE_TAP_MS = 300, DOUBLE_TAP_DIST = 40;
 const HIT_TOLERANCE = 1.4;
+// Anti-spam: every tap (re)starts this timer; a tap only counts as a find
+// attempt if it lands after the timer elapses (i.e. >= this long since the
+// previous tap). Rapid random tapping keeps resetting it, so none register.
+const TAP_COOLDOWN_MS = 2000;
 
 /* ========================================================================= */
 /* Progress persistence                                                      */
@@ -152,6 +160,7 @@ const SET_UID = {
   '01_06': 6,  '01_07': 7,  '01_08': 8,  '01_09': 9,  '01_10': 10,
   '02_01': 11, '02_02': 12, '02_03': 13, '02_04': 14, '02_05': 15, '02_06': 16,
   '02_07': 17, '02_08': 18, '02_09': 19, '02_10': 20, '02_11': 21, '02_12': 22,
+  '02_13': 23,
 };
 
 const UID_PREFIX = 'std_found_u';        // localStorage key: std_found_u<uid>
@@ -428,12 +437,14 @@ const view = { scale: 1, tx: 0, ty: 0 };
 let panelW = 0, panelH = 0, baseW = 0, baseH = 0, imgNatW = 0, imgNatH = 0;
 let currentZones = [];
 let found = new Set();
+let lastTapAt = -Infinity;   // shared across both panels (game-wide cooldown)
 
 function startGame(setId, collectionId) {
   currentSetId = setId;
   currentCollectionId = collectionId;
   currentZones = SETS[setId].zones;
   found = loadProgress(setId);
+  lastTapAt = -Infinity;   // first tap in a fresh puzzle counts immediately
 
   const col = COLLECTIONS.find(c => c.id === collectionId);
   els.gameTitle.textContent = col ? col.name : '';
@@ -662,6 +673,13 @@ function setupPanel(panel, markersContainer) {
   }, { passive: false });
 
   function handleTap(p) {
+    // Every tap restarts the 2s timer; only taps that land after it elapses
+    // count. This ignores rapid random tapping (each tap resets the clock).
+    const now = performance.now();
+    const sinceLast = now - lastTapAt;
+    lastTapAt = now;
+    if (sinceLast < TAP_COOLDOWN_MS) return;
+
     const { cx, cy } = localToNorm(p.x, p.y);
     if (cx < 0 || cx > 1 || cy < 0 || cy > 1) return;
     const hit = testHit(cx, cy);
