@@ -145,10 +145,14 @@ const MIN_SCALE = 1, MAX_SCALE = 6;
 const TAP_MOVE_TOL = 8, TAP_TIME_TOL = 350;
 const DOUBLE_TAP_MS = 300, DOUBLE_TAP_DIST = 40;
 const HIT_TOLERANCE = 1.4;
-// Anti-spam: every tap (re)starts this timer; a tap only counts as a find
-// attempt if it lands after the timer elapses (i.e. >= this long since the
-// previous tap). Rapid random tapping keeps resetting it, so none register.
-const TAP_COOLDOWN_MS = 2000;
+// ---- The Hayley Rule ----
+// After a guess is evaluated, further taps are ignored for a cooldown whose
+// length depends on the result: a CORRECT guess -> 1s, an INCORRECT guess ->
+// 3s. Deters rapid random tapping (each wrong guess costs 3s of dead time)
+// while keeping deliberate correct play snappy. Replaces the old flat 2s tap
+// delay.
+const HAYLEY_CORRECT_MS = 1000;
+const HAYLEY_WRONG_MS = 3000;
 
 /* ========================================================================= */
 /* Progress persistence                                                      */
@@ -445,14 +449,14 @@ const view = { scale: 1, tx: 0, ty: 0 };
 let panelW = 0, panelH = 0, baseW = 0, baseH = 0, imgNatW = 0, imgNatH = 0;
 let currentZones = [];
 let found = new Set();
-let lastTapAt = -Infinity;   // shared across both panels (game-wide cooldown)
+let hayleyCooldownUntil = 0;   // taps ignored until this time (Hayley Rule)
 
 function startGame(setId, collectionId) {
   currentSetId = setId;
   currentCollectionId = collectionId;
   currentZones = SETS[setId].zones;
   found = loadProgress(setId);
-  lastTapAt = -Infinity;   // first tap in a fresh puzzle counts immediately
+  hayleyCooldownUntil = 0;   // first tap in a fresh puzzle counts immediately
 
   const col = COLLECTIONS.find(c => c.id === collectionId);
   els.gameTitle.textContent = col ? col.name : '';
@@ -681,18 +685,21 @@ function setupPanel(panel, markersContainer) {
   }, { passive: false });
 
   function handleTap(p) {
-    // Every tap restarts the 2s timer; only taps that land after it elapses
-    // count. This ignores rapid random tapping (each tap resets the clock).
+    // Hayley Rule: ignore taps that land during the post-guess cooldown.
     const now = performance.now();
-    const sinceLast = now - lastTapAt;
-    lastTapAt = now;
-    if (sinceLast < TAP_COOLDOWN_MS) return;
+    if (now < hayleyCooldownUntil) return;
 
     const { cx, cy } = localToNorm(p.x, p.y);
-    if (cx < 0 || cx > 1 || cy < 0 || cy > 1) return;
+    if (cx < 0 || cx > 1 || cy < 0 || cy > 1) return;   // outside image — not a guess
+
     const hit = testHit(cx, cy);
-    if (hit >= 0) markFound(hit);
-    else showMiss(markersContainer, cx, cy);
+    if (hit >= 0) {
+      markFound(hit);
+      hayleyCooldownUntil = now + HAYLEY_CORRECT_MS;     // correct -> 1s
+    } else {
+      showMiss(markersContainer, cx, cy);
+      hayleyCooldownUntil = now + HAYLEY_WRONG_MS;        // incorrect -> 3s
+    }
   }
 }
 
